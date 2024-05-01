@@ -28,7 +28,6 @@ body {
     border: 1px solid #ddd;
     text-align: center;
 	line-height: 80px; /* Adjust line-height to match the input height for vertical centering */
-    font-size: 40px;
     outline: none;
 }
 

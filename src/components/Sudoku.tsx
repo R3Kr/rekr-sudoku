@@ -54,7 +54,7 @@ export default function Sudoku() {
       }
     }
     return [...highlighteds];
-  }, [markedCells]);
+  }, [markedCells, draftMode, cells]);
 
   useEffect(() => {
     if (cells.every((cell) => !cell.draft && cell.value !== 0)) {

@@ -1,0 +1,42 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.sudoku-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px; /* spacing between blocks */
+    border: 2px solid black;
+}
+
+.block {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px; /* spacing within blocks */
+    background-color: #fff;
+    border: 2px solid black;
+}
+
+.cell {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #ddd;
+    text-align: center;
+	line-height: 80px; /* Adjust line-height to match the input height for vertical centering */
+    font-size: 40px;
+    outline: none;
+}
+
+.highlighted {
+    border-color: blue;
+}
+
+.draft {
+	opacity: 0.5;
+	font-size: 30px;
+}

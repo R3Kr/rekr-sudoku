@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import "./Sudoku.css";
 import { createBoard } from "../lib/sudokuUtils";
 
@@ -32,13 +38,30 @@ export default function Sudoku() {
   );
   const [draftMode, setDraftMode] = useState(false);
 
-  useEffect(() => {
-    if (cells.every((cell) => 
-        !cell.draft && cell.value !== 0
-    )) {
-        window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUIcmlja3JvbGw%3D"
+  const highlighted = useMemo(() => {
+    const highlighteds = new Set<number>();
+    if (!draftMode) {
+      for (const [index, marked] of markedCells.entries()) {
+        if (!marked) continue;
+        const cell = cells[index];
+        if (cell.draft || cell.value === 0) continue;
+        cells
+          .map((c, i) => {
+            return { ...c, i };
+          })
+          .filter((c) => c.value === cell.value)
+          .forEach((c) => highlighteds.add(c.i));
+      }
     }
-  }, [cells])
+    return [...highlighteds];
+  }, [markedCells]);
+
+  useEffect(() => {
+    if (cells.every((cell) => !cell.draft && cell.value !== 0)) {
+      window.location.href =
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUIcmlja3JvbGw%3D";
+    }
+  }, [cells]);
 
   const beforeArrowMoveMark = useRef<boolean[] | null>();
   const curserindex = useRef<number>();
@@ -174,6 +197,10 @@ export default function Sudoku() {
                       });
                     }}
                     draftMode={draftMode}
+                    highlighted={highlighted.includes(((i / 3) | 0) * 18 +
+                    i * 3 +
+                    (i1 % 3) +
+                    ((i1 / 3) | 0) * 9)}
                   ></SudokuCell>
                 ))}
             </div>
@@ -189,13 +216,14 @@ function SudokuCell({
   marked,
   setMarked,
   draftMode,
+  highlighted
 }: {
   cell: Cell;
   marked: boolean;
   setMarked: (marked: boolean) => void;
   mousepressed: boolean;
-
   draftMode: boolean;
+  highlighted: boolean
 }) {
   const divref = useRef<HTMLDivElement>(null);
 
@@ -227,7 +255,7 @@ function SudokuCell({
       ref={divref}
       class={`cell select-none ${cell.draft ? "text-2xl" : "text-4xl"} ${
         !cell.static ? (cell.draft ? "opacity-50" : "opacity-70") : ""
-      } ${marked ? (draftMode ? "bg-amber-300" : "bg-cyan-500") : ""}`}
+      }  ${marked ? (draftMode ? "bg-amber-300" : "bg-cyan-500") : highlighted ? "bg-red-300": ""}`}
     >
       {!cell.draft ? (
         cell.value === 0 ? (

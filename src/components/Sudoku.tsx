@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "./Sudoku.css";
+import { createBoard } from "../lib/sudokuUtils";
 
 type Cell = {
-  value: number | Set<number>;
+  value: number | boolean[];
   static: boolean;
   draft: boolean;
 };
@@ -11,27 +12,33 @@ export default function Sudoku() {
   const [mousedown, setMousedown] = useState(false);
   const [shift, setShift] = useState(false);
   const [cells, setCells] = useState<Cell[]>(
-    Array(81)
-      .fill(0)
-      .map((v) => {
-        if (Math.random() < 0.3) {
-          return {
-            value: Math.floor(Math.random() * 9 + 1),
-            static: true,
-            draft: false,
-          };
-        }
+    createBoard(0.45).map((v) => {
+      if (v === 0) {
         return {
-          value: v,
-          static: false,
+          value: 0,
           draft: false,
+          static: false,
         };
-      })
+      }
+      return {
+        value: v,
+        draft: false,
+        static: true,
+      };
+    })
   );
   const [markedCells, setMarkedCells] = useState<boolean[]>(
     Array(81).fill(false)
   );
   const [draftMode, setDraftMode] = useState(false);
+
+  useEffect(() => {
+    if (cells.every((cell) => 
+        !cell.draft && cell.value !== 0
+    )) {
+        window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUIcmlja3JvbGw%3D"
+    }
+  }, [cells])
 
   const beforeArrowMoveMark = useRef<boolean[] | null>();
   const curserindex = useRef<number>();
@@ -90,11 +97,15 @@ export default function Sudoku() {
           oldCells.map((v, i) => {
             if (!v.static && markedCells[i]) {
               if (draftMode) {
-                const newDraftValues = new Set(
-                  v.value instanceof Set ? v.value : []
-                );
-                newDraftValues.add(num);
-                return { ...v, value: num !== 0 ? newDraftValues : new Set(), draft: true };
+                const newDraftValues = Array.isArray(v.value)
+                  ? [...v.value]
+                  : Array(9).fill(false);
+                if (num !== 0) {
+                  newDraftValues[num - 1] = !newDraftValues[num - 1];
+                } else {
+                  newDraftValues.fill(false);
+                }
+                return { ...v, value: newDraftValues, draft: true };
               }
               return { ...v, value: num, draft: false };
             }
@@ -218,13 +229,29 @@ function SudokuCell({
         !cell.static ? (cell.draft ? "opacity-50" : "opacity-70") : ""
       } ${marked ? (draftMode ? "bg-amber-300" : "bg-cyan-500") : ""}`}
     >
-      {!cell.draft
-        ? cell.value === 0
-          ? ""
-          : cell.value
-        : (cell.value as Set<number>).size === 0
-        ? ""
-        : [...(cell.value as Set<number>)].join()}
+      {!cell.draft ? (
+        cell.value === 0 ? (
+          ""
+        ) : (
+          cell.value
+        )
+      ) : (
+        <DraftValues values={cell.value as boolean[]}></DraftValues>
+      )}
     </div>
+  );
+}
+
+function DraftValues({ values }: { values: boolean[] }) {
+  return (
+    <>
+      {values
+        .map((v, i) => {
+          return { v, i };
+        })
+        .filter((v) => v.v)
+        .map((v) => v.i + 1)
+        .join()}
+    </>
   );
 }

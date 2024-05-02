@@ -130,7 +130,7 @@ export default function Sudoku() {
                 }
                 return { ...v, value: newDraftValues, draft: true };
               }
-              return { ...v, value: num, draft: false };
+              return { ...v, value: num === v.value ? 0 : num, draft: false };
             }
             return v;
           })

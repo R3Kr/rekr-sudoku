@@ -1,7 +1,11 @@
 ---
 import Sudoku from "../components/Sudoku"
+import { createBoard } from "../lib/sudokuUtils";
+import Layout from "../layouts/Layout.astro";
+const board = createBoard(0.45)
 ---
+<Layout>
+	<a href=`/game/${board.join("")}`>New Game</a>
+</Layout>
 
-<body>
-	<Sudoku client:load></Sudoku>
-</body>
+

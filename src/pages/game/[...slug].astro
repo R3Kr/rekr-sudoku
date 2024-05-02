@@ -1,0 +1,11 @@
+---
+import Sudoku from "../../components/Sudoku"
+import Layout from "../../layouts/Layout.astro";
+import { createBoard } from "../../lib/sudokuUtils";
+
+const {slug} = Astro.params
+const board = slug?.split("")?.map(v => Number.parseInt(v))
+---
+<Layout>
+    {board ? <Sudoku board={board} client:load></Sudoku> : "invalid sudoku"}
+</Layout>

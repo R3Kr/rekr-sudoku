@@ -6,7 +6,6 @@ import {
   useState,
 } from "preact/hooks";
 import "./Sudoku.css";
-import { createBoard } from "../lib/sudokuUtils";
 
 type Cell = {
   readonly value: number | boolean[];
@@ -47,11 +46,11 @@ function highlightAllDirections(index: number) {
   return highlights;
 }
 
-export default function Sudoku() {
+export default function Sudoku({board}:{board:number[]}) {
   const [mousedown, setMousedown] = useState(false);
   const [shift, setShift] = useState(false);
   const [cells, setCells] = useState<Cell[]>(
-    createBoard(0.45).map((v) => {
+    board.map((v) => {
       if (v === 0) {
         return {
           value: 0,
@@ -204,7 +203,7 @@ export default function Sudoku() {
             previous: versionHistory.current,
             next: []
           };
-          versionHistory.current.next.push(history)
+          versionHistory.current.next.unshift(history)
           versionHistory.current = history;
           return newCells;
         });
@@ -230,7 +229,7 @@ export default function Sudoku() {
   }, [markedCells, shift, draftMode]);
 
   return (
-    <>
+    <div class="sudoku-container">
       <div class="sudoku-grid">
         {Array(9)
           .fill(0)
@@ -278,7 +277,7 @@ export default function Sudoku() {
             </div>
           ))}
       </div>
-    </>
+    </div>
   );
 }
 

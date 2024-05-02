@@ -9,10 +9,43 @@ import "./Sudoku.css";
 import { createBoard } from "../lib/sudokuUtils";
 
 type Cell = {
-  value: number | boolean[];
-  static: boolean;
-  draft: boolean;
+  readonly value: number | boolean[];
+  readonly static: boolean;
+  readonly draft: boolean;
 };
+
+interface VersionHistoryNode {
+  state: Cell[];
+  previous?: VersionHistoryNode;
+  next: VersionHistoryNode[];
+}
+
+function highlightAllDirections(index: number) {
+  const highlights = [];
+  let iterIndex = index;
+  //left
+  while (iterIndex % 9 !== 0) {
+    highlights.push(--iterIndex);
+  }
+  //right
+  iterIndex = index;
+  while (iterIndex % 9 !== 8) {
+    highlights.push(++iterIndex);
+  }
+  //up
+  iterIndex = index;
+  while (iterIndex - 9 >= 0) {
+    iterIndex -= 9;
+    highlights.push(iterIndex);
+  }
+  //down
+  iterIndex = index;
+  while (iterIndex + 9 < 81) {
+    iterIndex += 9;
+    highlights.push(iterIndex);
+  }
+  return highlights;
+}
 
 export default function Sudoku() {
   const [mousedown, setMousedown] = useState(false);
@@ -40,21 +73,30 @@ export default function Sudoku() {
 
   const highlighted = useMemo(() => {
     const highlighteds = new Set<number>();
-    if (!draftMode) {
-      for (const [index, marked] of markedCells.entries()) {
-        if (!marked) continue;
-        const cell = cells[index];
-        if (cell.draft || cell.value === 0) continue;
-        cells
-          .map((c, i) => {
-            return { ...c, i };
-          })
-          .filter((c) => c.value === cell.value)
-          .forEach((c) => highlighteds.add(c.i));
-      }
+
+    for (const [index, marked] of markedCells.entries()) {
+      if (!marked) continue;
+      const cell = cells[index];
+      if (cell.value === 0) continue;
+      cells
+        .map((c, i) => {
+          return { ...c, i };
+        })
+        .filter(
+          (c) =>
+            c.value === cell.value ||
+            (Array.isArray(cell.value) &&
+              !Array.isArray(c.value) &&
+              cell.value[c.value - 1])
+        )
+        .forEach((c) => {
+          highlighteds.add(c.i);
+          //lite op
+          //highlightAllDirections(c.i).forEach(i => highlighteds.add(i))
+        });
     }
     return [...highlighteds];
-  }, [markedCells, draftMode, cells]);
+  }, [markedCells, cells]);
 
   useEffect(() => {
     if (cells.every((cell) => !cell.draft && cell.value !== 0)) {
@@ -65,6 +107,7 @@ export default function Sudoku() {
 
   const beforeArrowMoveMark = useRef<boolean[] | null>();
   const curserindex = useRef<number>();
+  const versionHistory = useRef<VersionHistoryNode>({ state: cells , next: []});
 
   useEffect(() => {
     document.onkeyup = (ev) => {
@@ -73,6 +116,28 @@ export default function Sudoku() {
       }
     };
     document.onkeydown = (ev) => {
+      if (ev.key === "z") {
+        if (versionHistory.current.previous) {
+          versionHistory.current = versionHistory.current.previous;
+          setCells(versionHistory.current.state);
+        }
+      }
+      if (ev.key === "y") {
+        if (versionHistory.current.next.length !== 0) {
+            if (versionHistory.current.next.length === 1) {
+                versionHistory.current = versionHistory.current.next[0];
+            }
+            else {
+                let answer = false;
+                let counter = 0
+                while(!answer) {
+                    answer = confirm(`There are now ${versionHistory.current.next.length - counter++} possible next states, press ok to go to redo or cancel to cycle through other alternatives`)
+                }
+                versionHistory.current = versionHistory.current.next[counter-1]
+            }
+          setCells(versionHistory.current.state);
+        }
+      }
       if (ev.key === "Shift" && !ev.repeat) {
         setShift(true);
         return;
@@ -116,8 +181,8 @@ export default function Sudoku() {
 
       const num = Number.parseInt(ev.key);
       if (num >= 0 && num <= 9) {
-        setCells((oldCells) =>
-          oldCells.map((v, i) => {
+        setCells((oldCells) => {
+          const newCells = oldCells.map((v, i) => {
             if (!v.static && markedCells[i]) {
               if (draftMode) {
                 const newDraftValues = Array.isArray(v.value)
@@ -133,8 +198,16 @@ export default function Sudoku() {
               return { ...v, value: num === v.value ? 0 : num, draft: false };
             }
             return v;
-          })
-        );
+          });
+          const history: VersionHistoryNode = {
+            state: newCells,
+            previous: versionHistory.current,
+            next: []
+          };
+          versionHistory.current.next.push(history)
+          versionHistory.current = history;
+          return newCells;
+        });
       }
     };
     document.onmousedown = (ev) => setMousedown(true);
@@ -197,10 +270,9 @@ export default function Sudoku() {
                       });
                     }}
                     draftMode={draftMode}
-                    highlighted={highlighted.includes(((i / 3) | 0) * 18 +
-                    i * 3 +
-                    (i1 % 3) +
-                    ((i1 / 3) | 0) * 9)}
+                    highlighted={highlighted.includes(
+                      ((i / 3) | 0) * 18 + i * 3 + (i1 % 3) + ((i1 / 3) | 0) * 9
+                    )}
                   ></SudokuCell>
                 ))}
             </div>
@@ -216,14 +288,14 @@ function SudokuCell({
   marked,
   setMarked,
   draftMode,
-  highlighted
+  highlighted,
 }: {
   cell: Cell;
   marked: boolean;
   setMarked: (marked: boolean) => void;
   mousepressed: boolean;
   draftMode: boolean;
-  highlighted: boolean
+  highlighted: boolean;
 }) {
   const divref = useRef<HTMLDivElement>(null);
 
@@ -255,7 +327,15 @@ function SudokuCell({
       ref={divref}
       class={`cell select-none ${cell.draft ? "text-2xl" : "text-4xl"} ${
         !cell.static ? (cell.draft ? "opacity-50" : "opacity-70") : ""
-      }  ${marked ? (draftMode ? "bg-amber-300" : "bg-cyan-500") : highlighted ? "bg-red-300": ""}`}
+      }  ${
+        marked
+          ? draftMode
+            ? "bg-amber-300"
+            : "bg-cyan-500"
+          : highlighted
+          ? "bg-red-300"
+          : ""
+      }`}
     >
       {!cell.draft ? (
         cell.value === 0 ? (
